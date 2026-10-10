@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>職場 Agent 應用</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control-room console — scenario index | live flow canvas | explainer panel; dark-first navy with amber flow light */
+:root{
+  --bg:#0a0f1e; --panel:#10172c; --panel2:#0d1326; --line:#1e2945; --fg:#e8ecf6; --muted:#8a96b8; --faint:#5b678a;
+  --edge:#2f3b63; --edge-hi:#52628f; --flow:#ffc864; --flow-dim:#5e4f30; --grid:#141d36; --node-bg:#0e152b;
+  --agent:#f0c76c; --tool:#6cdcc5; --data:#91a7ff; --gate:#b2a2ff; --human:#f29a8f; --io:#d4dae8;
+  --accent:#f0c76c; --good:#6cdcc5; --warn:#f29a8f;
+  --serif:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f2f3f7; --panel:#ffffff; --panel2:#f7f8fb; --line:#dde1ec; --fg:#131a2d; --muted:#59627f; --faint:#8a92ab;
+  --edge:#c2c9db; --edge-hi:#8790ad; --flow:#d4860c; --flow-dim:#ecd5ab; --grid:#e9ecf3; --node-bg:#ffffff;
+  --agent:#a8750c; --tool:#0d8a75; --data:#3655cf; --gate:#6549d3; --human:#c04436; --io:#3a4360;
+  --accent:#a8750c; --good:#0d8a75; --warn:#c04436; color-scheme:light}}
+:root[data-theme="light"]{
+  --bg:#f2f3f7; --panel:#ffffff; --panel2:#f7f8fb; --line:#dde1ec; --fg:#131a2d; --muted:#59627f; --faint:#8a92ab;
+  --edge:#c2c9db; --edge-hi:#8790ad; --flow:#d4860c; --flow-dim:#ecd5ab; --grid:#e9ecf3; --node-bg:#ffffff;
+  --agent:#a8750c; --tool:#0d8a75; --data:#3655cf; --gate:#6549d3; --human:#c04436; --io:#3a4360;
+  --accent:#a8750c; --good:#0d8a75; --warn:#c04436; color-scheme:light}
+:root[data-theme="dark"]{
+  --bg:#0a0f1e; --panel:#10172c; --panel2:#0d1326; --line:#1e2945; --fg:#e8ecf6; --muted:#8a96b8; --faint:#5b678a;
+  --edge:#2f3b63; --edge-hi:#52628f; --flow:#ffc864; --flow-dim:#5e4f30; --grid:#141d36; --node-bg:#0e152b;
+  --agent:#f0c76c; --tool:#6cdcc5; --data:#91a7ff; --gate:#b2a2ff; --human:#f29a8f; --io:#d4dae8;
+  --accent:#f0c76c; --good:#6cdcc5; --warn:#f29a8f; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.6}
+.wrap{padding-inline:clamp(16px,2.4vw,32px);padding-block:20px 40px;max-width:1500px;margin:0 auto}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.top h1{font-family:var(--serif);font-size:clamp(24px,3vw,32px);margin:0;letter-spacing:.02em;text-wrap:balance}
+.top p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.tools{display:flex;gap:10px;align-items:center}
+.tabs{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:4px}
+.tabs button{background:none;border:0;padding:7px 14px;border-radius:7px;cursor:pointer;color:var(--muted);font-size:14px;position:relative}
+.tabs button[aria-selected="true"]{color:var(--fg);background:var(--panel)}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:14px;right:14px;bottom:2px;height:2px;background:var(--accent);border-radius:2px}
+.icon-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;display:grid;place-items:center}
+.icon-btn svg{width:18px;height:18px}
+
+/* single view */
+.single{display:grid;grid-template-columns:250px minmax(0,1fr) 330px;gap:18px;align-items:start}
+.list{display:flex;flex-direction:column;gap:4px}
+.list button{display:grid;grid-template-columns:28px 1fr;gap:2px 8px;text-align:left;background:none;border:1px solid transparent;border-radius:10px;padding:10px 12px;cursor:pointer}
+.list button:hover{background:var(--panel2)}
+.list button[aria-current="true"]{background:var(--panel);border-color:var(--line)}
+.list .no{font-family:var(--mono);font-size:12px;color:var(--faint);padding-top:3px}
+.list button[aria-current="true"] .no{color:var(--accent)}
+.list .tt{font-weight:700;font-size:15px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.list .ss{grid-column:2;color:var(--muted);font-size:12.5px}
+.chip{font-size:10.5px;font-weight:500;letter-spacing:.06em;padding:1px 6px;border-radius:4px;border:1px solid var(--line);color:var(--muted)}
+.chip.mfg{color:var(--tool);border-color:color-mix(in srgb,var(--tool) 40%,transparent)}
+.listhead{font-size:11.5px;letter-spacing:.12em;color:var(--faint);padding:4px 12px}
+
+.stage{display:flex;flex-direction:column;gap:12px;min-width:0}
+.canvas{background:var(--panel2);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.ch{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:18px 22px 0}
+.ch h2{font-family:var(--serif);font-size:24px;margin:0}
+.en{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.svgwrap{overflow-x:auto;padding:4px 8px 10px}
+.svgwrap svg{display:block;width:100%;height:auto;min-width:620px}
+.stepbar{display:flex;gap:14px;align-items:baseline;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 18px;min-height:56px}
+#stepN{font-family:var(--mono);color:var(--accent);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#stepT{font-size:16px;min-width:0}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel2);padding:8px 16px;border-radius:9px;cursor:pointer;font-size:14px}
+.btn:hover{border-color:var(--edge-hi)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:700;min-width:72px}
+.speed{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13.5px;margin-left:6px}
+.speed input[type=range]{width:110px;accent-color:var(--accent)}
+#spdv{font-family:var(--mono);font-variant-numeric:tabular-nums;width:3.2em}
+.chk{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13.5px;cursor:pointer}
+.chk input{accent-color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border:1.6px solid;border-radius:3px;display:inline-block}
+.sw.agent{border-color:var(--agent)}.sw.tool{border-color:var(--tool)}.sw.data{border-color:var(--data);border-radius:50%/30%}
+.sw.gate{border-color:var(--gate);transform:rotate(45deg) scale(.8)}.sw.human{border-color:var(--human);border-radius:6px}.sw.io{border-color:var(--io);border-radius:6px}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;gap:14px}
+.panel h3{font-family:var(--serif);font-size:22px;margin:0;line-height:1.3}
+.panel .desc{margin:0;font-size:14.5px}
+.panel h4{margin:0;font-size:13.5px;color:var(--accent);padding-bottom:6px;border-bottom:1px solid var(--line)}
+.panel ol,.panel ul{margin:0;padding-left:1.3em;font-size:14px;display:flex;flex-direction:column;gap:5px}
+.panel ol li{color:var(--muted)}
+.panel ol li.done{color:var(--fg)}
+.panel ol li.cur{color:var(--accent);font-weight:700}
+.gw{display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13.5px}
+.gw b{display:block;font-size:12.5px;margin-bottom:2px}
+.gw .g b{color:var(--good)}.gw .w b{color:var(--warn)}
+
+/* SVG */
+.gridl{stroke:var(--grid);stroke-width:1}
+.arh{fill:var(--edge-hi)}
+.eb{fill:none;stroke:var(--edge);stroke-width:1.5;transition:stroke .3s}
+.edge.past .eb{stroke:var(--edge-hi)}
+.edge.on .eb{stroke:var(--flow-dim);stroke-width:2}
+.ef{fill:none;stroke:var(--flow);stroke-width:3.2;stroke-linecap:round;stroke-dasharray:16 84;opacity:0;filter:drop-shadow(0 0 4px var(--flow))}
+.edge.on .ef{opacity:1;animation:flow 1.15s linear infinite}
+@keyframes flow{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+.node .sh{fill:var(--node-bg);stroke:var(--c);stroke-width:1.6;stroke-opacity:.6;transition:stroke-opacity .3s,stroke-width .3s}
+.node .tl{fill:none;stroke:var(--c);stroke-width:1.6;stroke-opacity:.6}
+.node .lb{fill:var(--fg);font-family:var(--sans);font-weight:700;font-size:17px;text-anchor:middle}
+.node .sb{fill:var(--muted);font-family:var(--sans);font-size:12.5px;text-anchor:middle}
+.node.done .sh{stroke-opacity:.95}
+.node.active .sh,.node.active .tl{stroke-opacity:1;stroke-width:2.6}
+.node.active .sh{filter:drop-shadow(0 0 7px var(--c))}
+.node.active .sb{fill:var(--c)}
+.t-agent{--c:var(--agent)}.t-tool{--c:var(--tool)}.t-data{--c:var(--data)}.t-gate{--c:var(--gate)}.t-human{--c:var(--human)}.t-io{--c:var(--io)}
+
+/* overview */
+.ovgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,430px),1fr));gap:16px}
+.ov{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:10px;text-align:left;transition:border-color .2s}
+.ov:hover{border-color:var(--accent)}
+.ov .oh{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.ov h3{font-family:var(--serif);font-size:18px;margin:0;display:flex;gap:8px;align-items:center}
+.ov .box{background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.ov svg{display:block;width:100%;height:auto}
+.ov .cap{margin:0;color:var(--muted);font-size:13.5px;min-height:2.6em}
+
+/* blueprint */
+.plan{display:flex;flex-direction:column;gap:28px;max-width:1100px}
+.plan h2{font-family:var(--serif);font-size:22px;margin:0 0 4px}
+.plan .lead{color:var(--muted);margin:0 0 14px;max-width:65ch}
+.layers{display:flex;flex-direction:column;gap:6px}
+.layer{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--c);border-radius:10px;padding:12px 16px}
+.layer .ln{font-weight:700}
+.layer .ln small{display:block;font-family:var(--mono);font-weight:400;font-size:11.5px;color:var(--muted)}
+.layer .lc{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-size:13px;padding:3px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line)}
+.arrowdown{text-align:center;color:var(--faint);font-size:12px;line-height:1}
+.routes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px}
+.route{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.route.rec{border-color:var(--accent)}
+.route h3{margin:0;font-size:17px;display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.route .tag{font-size:11.5px;color:var(--accent);font-weight:500}
+.route dl{margin:0;display:grid;grid-template-columns:4.5em 1fr;gap:6px 10px;font-size:13.5px}
+.route dt{color:var(--muted)}
+.route dd{margin:0}
+.phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px;counter-reset:ph}
+.phase{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.phase .pn{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.phase h3{margin:2px 0 8px;font-size:17px}
+.phase ul,.checks ul{margin:0;padding-left:1.2em;font-size:14px;display:flex;flex-direction:column;gap:4px}
+.phase p{margin:10px 0 0;font-size:13px;color:var(--muted)}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px}
+.checks > div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.checks h3{margin:0 0 8px;font-size:16px}
+.note{font-size:12.5px;color:var(--faint)}
+
+@media (max-width:1180px){.single{grid-template-columns:230px minmax(0,1fr)}.panel{grid-column:1 / -1}}
+@media (max-width:780px){
+  .single{grid-template-columns:minmax(0,1fr)}
+  .list{flex-direction:row;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+  .listhead{display:none}
+  .list button{flex:0 0 auto;width:210px;scroll-snap-align:start;border-color:var(--line)}
+  .layer{grid-template-columns:1fr;gap:8px}
+  .gw{grid-template-columns:1fr}
+  .stepbar{flex-direction:column;gap:2px}
+}
+@media (prefers-reduced-motion: reduce){
+  .edge.on .ef{animation:none;stroke-dasharray:none;opacity:.85}
+  .eb,.node .sh{transition:none}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>職場 Agent 應用</h1>
+      <p>流光動態圖：看 Email、報價、交期與品檢如何由 Agent 串起來</p>
+    </div>
+    <div class="tools">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-single" aria-selected="true" data-v="single">單一情境</button>
+        <button role="tab" id="tab-over" aria-selected="false" data-v="over">全部總覽</button>
+        <button role="tab" id="tab-plan" aria-selected="false" data-v="plan">實作藍圖</button>
+      </div>
+      <button class="icon-btn" id="themeBtn" aria-label="切換深色／淺色">
+        <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 2a8 8 0 0 1 0 16z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section id="v-single" class="single">
+    <nav class="list" id="list" aria-label="情境列表"></nav>
+    <div class="stage">
+      <div class="canvas">
+        <div class="ch"><h2 id="sTitle"></h2><span class="en" id="sEn"></span></div>
+        <div class="svgwrap"><svg id="mainSvg" role="img" aria-label="Agent 流程圖"></svg></div>
+      </div>
+      <div class="stepbar" aria-live="polite"><span id="stepN"></span><span id="stepT"></span></div>
+      <div class="ctrl">
+        <button class="btn primary" id="playBtn">暫停</button>
+        <button class="btn" id="prevBtn">上一步</button>
+        <button class="btn" id="nextBtn">下一步</button>
+        <button class="btn" id="replayBtn">重播</button>
+        <label class="speed" for="spd">速度 <input type="range" id="spd" min="0.5" max="2" step="0.25" value="1"><span id="spdv">1.0×</span></label>
+        <label class="chk" for="autoNext"><input type="checkbox" id="autoNext"> 播完自動換下一個情境</label>
+      </div>
+      <div class="legend">
+        <span><i class="sw agent"></i>LLM／Agent</span><span><i class="sw tool"></i>工具</span><span><i class="sw data"></i>資料／記憶</span><span><i class="sw gate"></i>判斷閘門</span><span><i class="sw human"></i>人</span><span><i class="sw io"></i>輸入／輸出</span>
+      </div>
+    </div>
+    <aside class="panel" id="panel"></aside>
+  </section>
+
+  <section id="v-over" hidden>
+    <div class="ovgrid" id="ovgrid"></div>
+  </section>
+
+  <section id="v-plan" class="plan" hidden>
+    <div>
+      <h2>實際系統怎麼組起來</h2>
+      <p class="lead">上面每個情境，背後都是同一套五層架構。先把這五層搭好，之後每多一個情境，只是多寫一組流程與規則。</p>
+      <div class="layers">
+        <div class="layer" style="--c:var(--io)"><div class="ln">觸發層<small>Triggers</small></div><div class="lc"><span class="pill">Email 新信</span><span class="pill">Zalo OA／LINE 訊息</span><span class="pill">每週排程</span><span class="pill">表單送出</span><span class="pill">量測檔上傳</span></div></div>
+        <div class="arrowdown">▼</div>
+        <div class="layer" style="--c:var(--agent)"><div class="ln">Agent 層<small>LLM + 流程</small></div><div class="lc"><span class="pill">Claude API（理解、判斷、撰寫）</span><span class="pill">流程編排：n8n 或自寫程式</span><span class="pill">每個 Agent 一份角色說明與規則</span></div></div>
+        <div class="arrowdown">▼</div>
+        <div class="layer" style="--c:var(--tool)"><div class="ln">工具層<small>Tools / MCP</small></div><div class="lc"><span class="pill">Gmail／Outlook</span><span class="pill">Google Sheets／Excel</span><span class="pill">ERP／MES API</span><span class="pill">CRM</span><span class="pill">翻譯</span><span class="pill">PDF 報價單產生</span></div></div>
+        <div class="arrowdown">▼</div>
+        <div class="layer" style="--c:var(--human)"><div class="ln">人工確認層<small>Human in the loop</small></div><div class="lc"><span class="pill">草稿匣待確認</span><span class="pill">手機一鍵核准</span><span class="pill">毛利／金額門檻</span><span class="pill">退回附原因</span></div></div>
+        <div class="arrowdown">▼</div>
+        <div class="layer" style="--c:var(--data)"><div class="ln">紀錄層<small>Logs & Memory</small></div><div class="lc"><span class="pill">每次決策與依據留存</span><span class="pill">知識庫（型錄、FAQ、案例）</span><span class="pill">成效統計</span></div></div>
+      </div>
+    </div>
+
+    <div>
+      <h2>三種做法</h2>
+      <p class="lead">差別在於要多快看到成果、要接多深的公司系統。時程為一般專案的粗估，實際依資料整理程度而定。</p>
+      <div class="routes">
+        <div class="route">
+          <h3>快速驗證</h3>
+          <dl><dt>工具</dt><dd>Make 或 n8n 雲端版 + Claude API + Google Sheets</dd><dt>時程</dt><dd>約 1–2 週</dd><dt>適合</dt><dd>先跑一個情境給老闆或客戶看效果</dd><dt>限制</dt><dd>接 ERP、權限控管較弱</dd></dl>
+        </div>
+        <div class="route rec">
+          <h3>正式導入 <span class="tag">建議起點</span></h3>
+          <dl><dt>工具</dt><dd>n8n 自架在公司主機 + Claude API + 資料庫 + 簡單審核網頁</dd><dt>時程</dt><dd>約 4–8 週</dd><dt>適合</dt><dd>2–4 個情境，資料留在公司內</dd><dt>限制</dt><dd>需要一位人員維護流程</dd></dl>
+        </div>
+        <div class="route">
+          <h3>自建平台</h3>
+          <dl><dt>工具</dt><dd>Python／Node + Claude Agent SDK + MCP 接 ERP／MES + 管理後台與帳號權限</dd><dt>時程</dt><dd>約 2–4 個月</dd><dt>適合</dt><dd>當成產品賣給多家工廠</dd><dt>限制</dt><dd>需要開發團隊</dd></dl>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h2>建議導入順序</h2>
+      <p class="lead">先做最快見效、只需讀資料不需寫回系統的情境，再逐步接到產線。</p>
+      <div class="phases">
+        <div class="phase"><div class="pn">PHASE 1</div><h3>詢價到報價</h3><ul><li>Email 智慧分類回覆</li><li>客戶詢價 → 報價單</li><li>刀具選型推薦</li></ul><p>需要：價格表、型錄 Excel、Email 帳號</p></div>
+        <div class="phase"><div class="pn">PHASE 2</div><h3>客戶溝通</h3><ul><li>Zalo 越文多語客服</li><li>訂單交期追蹤</li><li>會議紀錄自動化</li></ul><p>需要：Zalo OA 帳號、ERP 可讀取訂單</p></div>
+        <div class="phase"><div class="pn">PHASE 3</div><h3>接進工廠系統</h3><ul><li>品檢異常處理</li><li>供應商比價採購</li><li>週報自動產出、請假報帳簽核</li></ul><p>需要：MES／量測資料、ERP 寫入權限</p></div>
+      </div>
+    </div>
+
+    <div class="checks">
+      <div><h3>上線前要先定好的事</h3><ul><li>哪些動作一定要人按確認（寄給客戶、報價、下單、付款）</li><li>客戶資料與圖面放在哪裡、誰能看</li><li>Agent 的帳號只開需要的權限</li><li>每次判斷都留紀錄，出錯能追</li><li>成效指標：回覆時間、報價週期、漏單數</li></ul></div>
+      <div><h3>開始做真實系統，需要你提供</h3><ul><li>第一個要做的情境（建議從報價開始）</li><li>公司信箱是 Gmail 還是 Outlook</li><li>有沒有 Zalo OA 官方帳號</li><li>ERP 系統名稱，以及能否用 API 或匯出 Excel</li><li>一份價格表與一份客戶詢價範例（可去敏）</li></ul></div>
+    </div>
+    <p class="note">展示頁中的客戶、品項、數字皆為示意範例。</p>
+  </section>
+</div>
+
+<script>
+const S=[
+{cat:'一般',title:'Email 智慧分類回覆',en:'Inbox Triage Agent',sum:'收信、分類、草擬、通知',
+ desc:'每封新信先由分類 Agent 判讀意圖：急件摘要推播、客戶詢價查 CRM 後草擬回信給你確認、電子報自動封存。',
+ nodes:[['inbox','io',85,260,'收件匣','Gmail／Outlook'],['cls','gate',290,260,'分類 Agent','判讀意圖'],['urg','agent',500,95,'急件 Agent','摘要重點'],['line','tool',720,95,'LINE 通知','推播給你'],['rep','agent',500,260,'回信 Agent','待命'],['you','human',720,260,'你確認','待確認'],['send','io',905,260,'寄出',''],['arc','tool',500,430,'自動封存','電子報／廣告'],['crm','data',720,430,'客戶資料','CRM']],
+ extra:['cls>urg','urg>line','cls>arc'],
+ steps:[{t:'新信：「想詢問 50 人企業內訓報價」',e:['inbox>cls'],n:{cls:'詢價'}},{t:'判斷為客戶詢價 → 交給回信 Agent',e:['cls>rep'],n:{rep:'接手處理'}},{t:'查 CRM：這位客戶過去的合作紀錄',e:['rep>crm']},{t:'取得去年合作方案與聯絡窗口',e:['crm>rep']},{t:'草擬好回信，先放草稿匣等你確認',e:['rep>you'],n:{rep:'草稿完成'}},{t:'你按下確認 → 寄出',e:['you>send'],n:{you:'已確認 ✓',send:'已寄出'}}],
+ pat:['路由（依信件意圖分流）','工具呼叫（CRM、LINE）','人機協作（寄出前確認）'],tools:['Gmail／Outlook','CRM 客戶資料','LINE／Zalo 通知'],gain:'每天少看大半無關信件，回信速度變快',warn:'對外寄信一定要保留人工確認'},
+{cat:'一般',title:'會議紀錄自動化',en:'Meeting Notes Agent',sum:'錄音 → 紀錄 → 待辦',
+ desc:'會議錄音轉成逐字稿後，紀錄 Agent 抽出決議與待辦，指派到人、排好下次會議，再把紀錄寄給所有人。',
+ nodes:[['rec','io',90,260,'會議錄音','Teams／Zoom'],['stt','tool',285,260,'語音轉文字','中／越／英'],['note','agent',485,260,'紀錄 Agent','待命'],['todo','tool',705,95,'待辦清單','指派到人'],['cal','tool',705,260,'行事曆','下次會議'],['mail','tool',705,430,'Email','寄給與會者'],['done','io',900,260,'完成','']],
+ steps:[{t:'會議結束，錄音檔上傳',e:['rec>stt']},{t:'轉成逐字稿，中越英混講也能辨識',e:['stt>note'],n:{note:'整理中'}},{t:'抽出 3 項決議、5 項待辦，標註負責人',e:['note>todo'],n:{note:'摘要決議'}},{t:'找出大家都有空的時段，排好下次會議',e:['note>cal'],n:{cal:'週四 14:00'}},{t:'紀錄寄給所有與會者',e:['note>mail']},{t:'待辦指派到人、下次會議排好、紀錄寄出',e:['todo>done','cal>done','mail>done'],n:{done:'✓'}}],
+ pat:['串接流程','平行分派（待辦、行事曆、Email 同時進行）'],tools:['Teams／Zoom／Google Meet','語音轉文字','Google 日曆','Email'],gain:'會議一結束，紀錄與分工就到大家手上',warn:'敏感會議需先取得與會者同意錄音'},
+{cat:'一般',title:'週報自動產出',en:'Reporting Agent',sum:'抓資料 → 分析 → 簡報',
+ desc:'排程每週一自動抓銷售系統與各廠 Excel，分析與上週的差異、產生圖表，08:30 前把一頁簡報寄給主管。',
+ nodes:[['sales','data',115,95,'銷售系統','ERP'],['excel','data',115,430,'分廠 Excel','各廠回報'],['rpt','agent',385,260,'報表 Agent','待命'],['ana','tool',645,95,'資料分析','異常偵測'],['chart','tool',645,430,'圖表產生',''],['brief','io',880,260,'週報簡報',''],['boss','human',880,430,'主管','']],
+ steps:[{t:'每週一 07:00 排程啟動，抓取兩邊資料',e:['sales>rpt','excel>rpt'],n:{rpt:'彙整中'}},{t:'送去分析：毛利、出貨量、與上週比較',e:['rpt>ana']},{t:'發現 B 廠出貨量 -18%，標註待查',e:['ana>rpt'],n:{ana:'1 項異常'}},{t:'產生趨勢圖',e:['rpt>chart']},{t:'組成一頁簡報',e:['chart>brief'],n:{brief:'1 頁'}},{t:'08:30 寄給主管，信內附三行重點',e:['brief>boss'],n:{boss:'已收到'}}],
+ pat:['排程觸發','反覆檢查（分析結果回饋給報表 Agent）','工具呼叫'],tools:['ERP／銷售系統','Excel／Google Sheets','圖表產生','Email'],gain:'主管一早就看到重點與異常',warn:'資料來源格式要固定，否則數字會錯'},
+{cat:'一般',title:'請假報帳簽核',en:'Approval Agent',sum:'規則檢查 → 主管簽核',
+ desc:'員工送出請假或報帳，簽核 Agent 先比對人事規章與附件，合規才送主管；核准後同步 HR 系統與團隊行事曆，再回報員工。',
+ nodes:[['emp','human',90,260,'員工',''],['ap','gate',315,260,'簽核 Agent','規則檢查'],['rule','data',315,440,'人事規章',''],['mgr','human',545,95,'主管',''],['hr','tool',775,95,'HR 系統',''],['cal','tool',775,300,'團隊行事曆','']],
+ steps:[{t:'小陳送出報帳 12,000 元',e:['emp>ap']},{t:'比對規章：單筆超過 10,000 元需主管簽核',e:['ap>rule','rule>ap'],n:{ap:'需主管簽'}},{t:'附件齊全、金額合規 → 送主管',e:['ap>mgr']},{t:'主管在手機一鍵核准',e:['mgr>hr'],n:{mgr:'已核准 ✓'}},{t:'入帳並同步團隊行事曆',e:['hr>cal']},{t:'通知小陳：已核准，預計週五撥款',e:['ap>emp'],n:{emp:'已通知'}}],
+ pat:['規則判斷閘門','人機協作（主管核准）','狀態回報'],tools:['表單／LINE','人事規章文件','HR／會計系統','團隊行事曆'],gain:'主管只看合規的單，退件變少',warn:'規章更新時要同步更新 Agent 的規則'},
+{cat:'製造',title:'客戶詢價 → 報價單',en:'Quotation Agent',sum:'讀圖面 → 試算 → 毛利把關',
+ desc:'客戶詢價進來，擷取 Agent 讀懂圖面與規格；報價 Agent 查價格表與歷史成交價後試算，毛利過關才給業務確認並產出報價單。',
+ nodes:[['mail','io',90,260,'客戶詢價','Email／Zalo'],['ext','agent',295,260,'擷取 Agent','讀圖面'],['draw','data',295,435,'圖面附件','PDF'],['price','data',505,90,'價格表','歷史成交'],['quo','agent',505,260,'報價 Agent','待命'],['gate','gate',720,260,'毛利把關','≥ 25%'],['sales','human',720,435,'業務確認',''],['out','io',910,260,'報價單','PDF']],
+ steps:[{t:'客戶來信：「Ø8 四刃平銑刀 500 支，加工 SUS304」',e:['mail>ext']},{t:'讀附件圖面：刃長、塗層、公差',e:['ext>draw','draw>ext'],n:{ext:'規格已擷取'}},{t:'規格整理好，交給報價 Agent',e:['ext>quo'],n:{quo:'試算中'}},{t:'查價格表與這家客戶過去的成交價',e:['quo>price','price>quo']},{t:'毛利試算 27%，通過門檻',e:['quo>gate'],n:{gate:'27% ✓'}},{t:'業務看過一眼，產出報價單',e:['gate>sales','sales>out'],n:{sales:'已確認 ✓',out:'已產出'}}],
+ pat:['文件理解（PDF、圖面）','工具呼叫（價格表、歷史成交）','毛利閘門','人機協作'],tools:['Email／Zalo','圖面 PDF','價格表 Excel','報價單範本'],gain:'報價從半天縮到幾分鐘，價格標準一致',warn:'毛利門檻與特殊折扣仍由業務決定'},
+{cat:'製造',title:'訂單交期追蹤',en:'Delivery Tracking Agent',sum:'查 ERP、產線 → 回覆客戶',
+ desc:'客戶問貨況時，交期 Agent 同時查 ERP 訂單與產線進度，判斷能否如期；有風險先通知生管，再附上進度回覆客戶。',
+ nodes:[['cust','human',90,260,'客戶','「我的貨呢？」'],['ord','agent',320,260,'交期 Agent','待命'],['erp','data',320,90,'ERP 訂單',''],['mes','data',570,90,'產線進度','MES'],['risk','gate',570,260,'延誤判斷',''],['pm','human',805,430,'生管',''],['reply','io',810,260,'回覆客戶','']],
+ steps:[{t:'客戶在 Zalo 問：PO-2381 什麼時候出貨？',e:['cust>ord'],n:{ord:'查詢中'}},{t:'查 ERP：訂單 1,200 件，交期 10/18',e:['ord>erp','erp>ord']},{t:'查產線：熱處理完成，塗層排在 10/16',e:['ord>mes','mes>ord']},{t:'判斷：可如期，緩衝 2 天',e:['ord>risk'],n:{risk:'如期 ✓'}},{t:'同步給生管：塗層這批不能再延',e:['risk>pm'],n:{pm:'已知會'}},{t:'附上預計到貨日回覆客戶',e:['risk>reply'],n:{reply:'已回覆'}}],
+ pat:['多來源查詢','風險判斷','主動通知'],tools:['Zalo／LINE','ERP 訂單','MES 產線進度','生管群組'],gain:'業務不用再到處問進度',warn:'ERP、MES 資料要即時，否則回覆會失準'},
+{cat:'製造',title:'品檢異常處理',en:'Quality Agent',sum:'判定 → 鎖批 → 原因推估',
+ desc:'量測數據一上傳，品檢 Agent 比對圖面公差；判定 NG 就鎖住該批，分析 Agent 比對過往案例推估原因，交給品保工程師開 8D。',
+ nodes:[['meas','tool',90,260,'量測儀','三次元'],['qc','agent',295,260,'品檢 Agent','待命'],['spec','data',295,435,'規格標準','圖面公差'],['judge','gate',510,260,'判定','OK／NG'],['hold','tool',725,90,'鎖定批次','MES'],['rca','agent',725,260,'分析 Agent','原因推估'],['hist','data',725,435,'異常案例庫',''],['eng','human',915,260,'品保工程師','']],
+ steps:[{t:'量測上傳：外徑 7.982 mm，公差 -0.015',e:['meas>qc'],n:{qc:'比對中'}},{t:'對照圖面規格',e:['qc>spec','spec>qc']},{t:'超出公差 3 μm → NG',e:['qc>judge'],n:{judge:'NG ✕'}},{t:'自動鎖定這一批，避免出貨',e:['judge>hold'],n:{hold:'LOT-0917 已鎖'}},{t:'比對案例庫：上次同樣問題是砂輪磨耗',e:['judge>rca','rca>hist','hist>rca']},{t:'附數據與推估原因，送品保工程師開 8D',e:['rca>eng'],n:{eng:'開立 8D'}}],
+ pat:['自動判定閘門','立即處置（鎖批）','案例檢索','人機協作'],tools:['三次元／量測儀','圖面公差','MES 批次管理','異常案例庫'],gain:'不良品不會流出，原因分析有依據',warn:'判定標準由品保簽核，Agent 只提建議'},
+{cat:'製造',title:'刀具選型推薦',en:'Tool Selection Agent',sum:'型錄篩選 → 參數 → 庫存',
+ desc:'客戶描述材質、硬度與機台條件，選型 Agent 從型錄篩選、計算切削參數、查庫存，整理三個方案交給業務。',
+ nodes:[['q','io',95,260,'客戶需求','材質／機台'],['sel','agent',320,260,'選型 Agent','待命'],['cat','data',320,90,'產品型錄','1,200 品項'],['cond','tool',570,90,'切削參數','計算 Vc／fz'],['stock','data',570,435,'庫存','現貨／交期'],['rec','io',810,260,'推薦方案','3 選 1'],['sales','human',810,435,'業務','']],
+ steps:[{t:'「加工 SKD11 模具鋼 HRC58，主軸 12,000 rpm」',e:['q>sel'],n:{sel:'篩選中'}},{t:'從型錄篩出適合高硬度的 8 支',e:['sel>cat','cat>sel'],n:{cat:'8 支符合'}},{t:'計算轉速與進給，排除不合機台的',e:['sel>cond','cond>sel'],n:{cond:'剩 5 支'}},{t:'查庫存：3 支有現貨',e:['sel>stock','stock>sel'],n:{stock:'3 支現貨'}},{t:'整理 3 個方案，附參數表',e:['sel>rec']},{t:'交給業務，附上試刀邀約',e:['rec>sales'],n:{sales:'已轉交'}}],
+ pat:['篩選與排序','計算工具','庫存查詢'],tools:['產品型錄','切削參數計算','庫存系統','CRM'],gain:'新進業務也能給出專業建議',warn:'參數為建議值，首次加工需試刀確認'},
+{cat:'製造',title:'供應商比價採購',en:'Procurement Agent',sum:'詢價 → 評分 → 核准',
+ desc:'生管開出需求後，採購 Agent 挑合格供應商、發詢價信、收回報價並依權重評分，建議最佳選擇給主管核准後開 PO。',
+ nodes:[['req','human',90,260,'生管','採購需求'],['buy','agent',305,260,'採購 Agent','待命'],['sup','data',305,90,'供應商名單',''],['rfq','tool',535,90,'詢價信','發 4 家'],['cmp','gate',535,260,'比價評分',''],['boss','human',750,260,'主管',''],['po','io',915,260,'PO 下單','ERP']],
+ steps:[{t:'生管開單：碳化鎢棒 Ø10 × 300 支',e:['req>buy'],n:{buy:'處理中'}},{t:'挑出合格供應商 4 家',e:['buy>sup','sup>buy']},{t:'自動寄出詢價信',e:['buy>rfq']},{t:'收回報價，依價格 50%、交期 30%、品質 20% 評分',e:['rfq>cmp'],n:{rfq:'4／4 回覆'}},{t:'建議 B 廠：便宜 6%，交期 10 天',e:['cmp>boss'],n:{cmp:'B 廠 87 分'}},{t:'主管核准 → 開立 PO',e:['boss>po'],n:{boss:'已核准 ✓',po:'已開立'}}],
+ pat:['平行詢價','加權評分閘門','人機協作'],tools:['供應商名單','Email','比價表','ERP 採購單'],gain:'比價過程透明、可追溯',warn:'下單與付款一定由人核准'},
+{cat:'製造',title:'Zalo 越文客服',en:'Multilingual Service Agent',sum:'翻譯 → 自答或轉業務',
+ desc:'越南客戶用 Zalo 越文詢問，客服 Agent 翻譯理解後查知識庫；簡單問題直接以越文回覆，議價或客訴轉給業務並附中文摘要。',
+ nodes:[['cus','human',90,260,'越南客戶','Zalo 越文'],['tr','tool',320,90,'翻譯','越 ↔ 中'],['cs','agent',320,260,'客服 Agent','待命'],['kb','data',320,435,'知識庫','FAQ／型錄'],['route','gate',565,260,'能自答？',''],['auto','io',805,110,'越文回覆',''],['staff','human',805,410,'台灣業務','附中文摘要']],
+ extra:['route>staff'],
+ steps:[{t:'客戶用越文問：「Mũi khoan 6mm giao trong mấy ngày?」',e:['cus>cs'],n:{cs:'理解中'}},{t:'翻成中文：6 mm 鑽頭幾天能交貨？',e:['cs>tr','tr>cs']},{t:'查知識庫：現貨，3 天到貨',e:['cs>kb','kb>cs']},{t:'判斷為一般問題，可以直接回答',e:['cs>route'],n:{route:'可自答 ✓'}},{t:'以越文自動回覆，語氣照公司範本',e:['route>auto'],n:{auto:'已送出'}},{t:'議價、客訴類問題轉給業務，附中文摘要',e:['route>staff']}],
+ pat:['翻譯','知識庫檢索','路由（自答或轉人）'],tools:['Zalo OA','翻譯（越／中／英）','FAQ 與型錄知識庫','工單系統'],gain:'語言不再是瓶頸，下班後也能回覆',warn:'報價、承諾交期不要讓 Agent 自行回覆'}
+];
+
+const NS='http://www.w3.org/2000/svg';
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function tw(s,z){let w=0;for(const ch of s||'')w+=/[⺀-鿿　-〿＀-￯]/.test(ch)?z:z*.6;return w}
+let UID=0;
+function bound(n,ux,uy,gap){
+  const ax=Math.abs(ux),ay=Math.abs(uy);let t;
+  if(n.type==='gate')t=1/(ax/n.hw+ay/n.hh);
+  else t=Math.min(ax?n.hw/ax:1e9,ay?n.hh/ay:1e9);
+  return [n.x+ux*(t+gap),n.y+uy*(t+gap)];
+}
+function build(svg,sc){
+  svg.innerHTML='';const u='u'+(UID++);
+  svg.setAttribute('viewBox','0 0 1000 520');
+  const defs=el('defs',{},svg);
+  const pat=el('pattern',{id:'g'+u,width:40,height:40,patternUnits:'userSpaceOnUse'},defs);
+  el('path',{d:'M40 0H0V40',fill:'none',class:'gridl'},pat);
+  const mk=el('marker',{id:'a'+u,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},defs);
+  el('path',{d:'M0,1 L9,5 L0,9 z',class:'arh'},mk);
+  el('rect',{x:0,y:0,width:1000,height:520,fill:'url(#g'+u+')'},svg);
+  const N={};
+  for(const [id,type,x,y,label,sub] of sc.nodes){
+    let w=Math.max(128,Math.max(tw(label,17),tw(sub,12.5))+40),h=62;
+    if(type==='gate'){w*=1.32;h=86} if(type==='data')h=74;
+    N[id]={id,type,x,y,label,sub,hw:w/2,hh:h/2};
+  }
+  const keys=new Set();sc.steps.forEach(s=>s.e.forEach(k=>keys.add(k)));(sc.extra||[]).forEach(k=>keys.add(k));
+  const eg=el('g',{},svg),ng=el('g',{},svg),E={},NE={},SB={};
+  for(const k of keys){
+    const [a,b]=k.split('>'),A=N[a],B=N[b];
+    const dx=B.x-A.x,dy=B.y-A.y,L=Math.hypot(dx,dy),ux=dx/L,uy=dy/L;
+    let ox=0,oy=0;if(keys.has(b+'>'+a)){ox=-uy*8;oy=ux*8}
+    const p1=bound(A,ux,uy,4),p2=bound(B,-ux,-uy,6);
+    const d=`M${(p1[0]+ox).toFixed(1)} ${(p1[1]+oy).toFixed(1)}L${(p2[0]+ox).toFixed(1)} ${(p2[1]+oy).toFixed(1)}`;
+    const g=el('g',{class:'edge'},eg);
+    el('path',{d,class:'eb','marker-end':'url(#a'+u+')'},g);
+    el('path',{d,class:'ef',pathLength:100},g);
+    E[k]=g;
+  }
+  for(const id in N){
+    const n=N[id],g=el('g',{class:'node t-'+n.type,transform:`translate(${n.x},${n.y})`},ng);
+    const {hw,hh}=n;
+    if(n.type==='gate')el('polygon',{class:'sh',points:`0,${-hh} ${hw},0 0,${hh} ${-hw},0`},g);
+    else if(n.type==='tool'){const c=12;el('polygon',{class:'sh',points:`${-hw+c},${-hh} ${hw-c},${-hh} ${hw},${-hh+c} ${hw},${hh-c} ${hw-c},${hh} ${-hw+c},${hh} ${-hw},${hh-c} ${-hw},${-hh+c}`},g)}
+    else if(n.type==='data'){const r=9;el('path',{class:'sh',d:`M${-hw},${-hh+r} A${hw},${r} 0 0 1 ${hw},${-hh+r} L${hw},${hh-r} A${hw},${r} 0 0 1 ${-hw},${hh-r} Z`},g);el('path',{class:'tl',d:`M${-hw},${-hh+r} A${hw},${r} 0 0 0 ${hw},${-hh+r}`},g)}
+    else el('rect',{class:'sh',x:-hw,y:-hh,width:hw*2,height:hh*2,rx:(n.type==='agent'?12:hh)},g);
+    const dy=n.type==='data'?5:0;
+    const lb=el('text',{class:'lb',y:(n.sub?-3:6)+dy},g);lb.textContent=n.label;
+    const sb=el('text',{class:'sb',y:18+dy},g);sb.textContent=n.sub;
+    NE[id]=g;SB[id]=sb;
+  }
+  return {sc,N,E,NE,SB};
+}
+function apply(v,i){
+  const sc=v.sc,cur=new Set(sc.steps[i].e),past=new Set();
+  for(let j=0;j<i;j++)sc.steps[j].e.forEach(k=>past.add(k));
+  for(const k in v.E){v.E[k].classList.toggle('on',cur.has(k));v.E[k].classList.toggle('past',past.has(k)&&!cur.has(k))}
+  const act=new Set(),done=new Set();
+  cur.forEach(k=>k.split('>').forEach(x=>act.add(x)));past.forEach(k=>k.split('>').forEach(x=>done.add(x)));
+  const subs={};for(const id in v.N)subs[id]=v.N[id].sub;
+  for(let j=0;j<=i;j++)Object.assign(subs,sc.steps[j].n||{});
+  for(const id in v.NE){v.NE[id].classList.toggle('active',act.has(id));v.NE[id].classList.toggle('done',done.has(id));v.SB[id].textContent=subs[id]}
+}
+const pad=n=>String(n).padStart(2,'0');
+const chip=c=>`<span class="chip${c==='製造'?' mfg':''}">${c}</span>`;
+
+/* single view */
+const $=id=>document.getElementById(id);
+const st={sc:0,i:0,playing:true,speed:1,auto:false,timer:null,view:null};
+const list=$('list');
+list.innerHTML='<div class="listhead">情境</div>'+S.map((s,k)=>`<button data-k="${k}" aria-current="false"><span class="no">${pad(k+1)}</span><span class="tt">${s.title} ${chip(s.cat)}</span><span class="ss">${s.sum}</span></button>`).join('');
+list.addEventListener('click',e=>{const b=e.target.closest('button');if(b){load(+b.dataset.k,true)}});
+
+function renderPanel(){
+  const s=S[st.sc];
+  $('panel').innerHTML=`<div><h3>${s.title}</h3><div class="en">${s.en}</div></div><p class="desc">${s.desc}</p>
+  <div><h4>運作步驟（本輪）</h4></div><ol id="stepList">${s.steps.map(x=>`<li>${x.t}</li>`).join('')}</ol>
+  <h4>使用的 Agent 模式</h4><ul>${s.pat.map(x=>`<li>${x}</li>`).join('')}</ul>
+  <h4>串接的工具</h4><ul>${s.tools.map(x=>`<li>${x}</li>`).join('')}</ul>
+  <h4>效益與注意</h4><div class="gw"><div class="g"><b>效益</b>${s.gain}</div><div class="w"><b>注意</b>${s.warn}</div></div>`;
+}
+function load(k,play){
+  st.sc=k;st.view=build($('mainSvg'),S[k]);
+  $('sTitle').textContent=S[k].title;$('sEn').textContent=S[k].en;
+  list.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',+b.dataset.k===k?'true':'false'));
+  const cb=list.querySelector(`button[data-k="${k}"]`);
+  if(cb&&window.innerWidth<=780)list.scrollTo({left:cb.offsetLeft-list.offsetLeft,behavior:'smooth'});
+  renderPanel();go(0);if(play)setPlaying(true);else schedule();
+}
+function go(i){
+  const s=S[st.sc];st.i=Math.max(0,Math.min(i,s.steps.length-1));
+  apply(st.view,st.i);
+  $('stepN').textContent=`${st.i+1}／${s.steps.length}`;$('stepT').textContent=s.steps[st.i].t;
+  document.querySelectorAll('#stepList li').forEach((li,j)=>{li.className=j<st.i?'done':j===st.i?'cur':''});
+}
+function schedule(){
+  clearTimeout(st.timer);if(!st.playing||curView!=='single')return;
+  st.timer=setTimeout(()=>{
+    const s=S[st.sc];
+    if(st.i<s.steps.length-1){go(st.i+1);schedule()}
+    else if(st.auto){load((st.sc+1)%S.length)}
+    else setPlaying(false);
+  },2300/st.speed);
+}
+function setPlaying(p){
+  st.playing=p;
+  if(p&&st.i>=S[st.sc].steps.length-1)go(0);
+  $('playBtn').textContent=p?'暫停':'播放';schedule();
+}
+$('playBtn').onclick=()=>setPlaying(!st.playing);
+$('prevBtn').onclick=()=>{setPlaying(false);go(st.i-1)};
+$('nextBtn').onclick=()=>{setPlaying(false);go(st.i+1)};
+$('replayBtn').onclick=()=>{go(0);setPlaying(true)};
+$('spd').oninput=e=>{st.speed=+e.target.value;$('spdv').textContent=st.speed.toFixed(1)+'×';schedule()};
+$('autoNext').onchange=e=>{st.auto=e.target.checked};
+
+/* overview */
+const ov=[];
+$('ovgrid').innerHTML=S.map((s,k)=>`<button class="ov" data-k="${k}"><div class="oh"><h3>${s.title} ${chip(s.cat)}</h3><span class="en">${s.en}</span></div><div class="box"><svg></svg></div><p class="cap"></p></button>`).join('');
+document.querySelectorAll('.ov').forEach((c,k)=>{
+  const v=build(c.querySelector('svg'),S[k]);const o={v,i:(k*2)%S[k].steps.length,cap:c.querySelector('.cap')};
+  ov.push(o);apply(v,o.i);o.cap.textContent=S[k].steps[o.i].t;
+  c.onclick=()=>{show('single');load(k,true)};
+});
+let ovTimer=null;
+function tickOv(){ov.forEach((o,k)=>{o.i=(o.i+1)%S[k].steps.length;apply(o.v,o.i);o.cap.textContent=S[k].steps[o.i].t})}
+
+/* tabs + theme */
+let curView='single';
+function show(v){
+  curView=v;
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===v?'true':'false'));
+  $('v-single').hidden=v!=='single';$('v-over').hidden=v!=='over';$('v-plan').hidden=v!=='plan';
+  clearInterval(ovTimer);if(v==='over')ovTimer=setInterval(tickOv,2000);
+  schedule();
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>show(b.dataset.v));
+$('themeBtn').onclick=()=>{
+  const r=document.documentElement,cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');
+  r.dataset.theme=cur==='dark'?'light':'dark';
+  try{localStorage.setItem('agentTheme',r.dataset.theme)}catch(e){}
+};
+try{const t=localStorage.getItem('agentTheme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+
+const h=location.hash.slice(1);
+load(0);
+if(h==='overview')show('over');else if(h==='plan')show('plan');
+</script>
+</body>
+</html>
